@@ -1,0 +1,5 @@
+{
+    "appService.showBuildDuringDeployPrompt": false,
+    "appService.defaultWebAppToDeploy": "/subscriptions/b969ffd8-4807-4384-bc36-c4e17384b877/resourceGroups/appsvc_rg_linux_centralus/providers/Microsoft.Web/sites/roombot",
+    "appService.deploySubpath": ""
+}
