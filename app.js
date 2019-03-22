@@ -15,7 +15,7 @@ var app = express();
 global.wechatyQr = '';
 global.msgsentCount = 0;
 function onScan (qrcode, status) {
-  //require('qrcode-terminal').generate(qrcode, { small: true })  // show qrcode on console
+  require('qrcode-terminal').generate(qrcode, { small: true })  // show qrcode on console
   const qrcodeImageUrl = [
     'https://api.qrserver.com/v1/create-qr-code/?data=',
     encodeURIComponent(qrcode),
@@ -23,7 +23,7 @@ function onScan (qrcode, status) {
 
   global.wechatyQr = qrcodeImageUrl;
 
-  //console.log(qrcodeImageUrl)  
+  console.log(qrcodeImageUrl)  
   
 }
 
