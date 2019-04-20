@@ -3,6 +3,7 @@ var FileBox = require('file-box');
 var express = require('express');
 var router = express.Router();
 const { Wechaty } = require('wechaty')
+const Localjobs = require('././models/Localjob');
 
 const globalAdText = '【房地产推荐<img class="emoji emoji1f3e1" text="_web" src="/zh_CN/htmledition/v2/images/spacer.gif">】<br>这里是墨尔本H&amp;T华信公司地产投资顾问Cotica Wei. 专业的为您讲解墨尔本房地产知识以及专业的根据您的预算为您做资产配置。如果您想了解相应的地产项目 海内外贷款 投资理念。 可以随时联系我。 扫描下方二维码 或者 添加微信号 13604823472。';
 const globalImagePath = './images/1.jpg';
@@ -60,16 +61,16 @@ async function delayedMessage(room) {
 
 async function initRoom() {
   console.log('begin to initRoom!')
-  var maxCallAtempt = 1;
+  var maxCallAtempt = 2;
   var currentAttempt = 0;
   const MAX_ROOM_ = 80;
 
   var roomList = [];
   
 
+  roomList = await bot.Room.findAll();
 
-
-  while (roomList.length < MAX_ROOM_ && currentAttempt <= maxCallAtempt) {
+  while (roomList.length < MAX_ROOM_ && currentAttempt < maxCallAtempt) {
     
     console.warn(`room num not ready. retry after 5 seconds. room num: ${roomList.length}. current attempt: ${currentAttempt}`)
     await sleep(5000).then(() => {
@@ -137,6 +138,11 @@ async function broadcastTest() {
 
 }
 
+router.post('/job', async function (req, res, next) {
+ 
+  
+});
+
 /* GET home page. */
 router.get('/', async function (req, res, next) {
   res.render('index', { title: '群发助手-pro', qrcode: wechatyQr });
@@ -156,8 +162,58 @@ router.post('/rooms', async function (req, res, next) {
   
 });
 
+router.get('/me', async function (req, res, next) {
+
+  var selfId = bot.userSelf();
 
 
+  console.log(selfId.payload.id + ' ' + selfId.name() + ' ' );
+  console.log(selfId);
+ 
+  var value = selfId.payload.weixin;
+  if(!value || value == '')
+  {
+    value = selfId.payload.id;
+  }
+
+  res.send( {wxRef: value, name: selfId.name()});
+});
+
+router.post('/members', async function (req, res, next) {
+  var aTopic = req.body.topic;
+  console.log(aTopic);
+  const room = await bot.Room.find({ topic: aTopic });
+
+  if (room) {
+
+    console.log(room)
+    console.log('getting the room members')
+    var allMembers = await room.memberAll();
+    //console.log(allMembers )
+    var results = [];
+    for (var aMember of allMembers) {
+      results.push(
+        //wxid: aMember.payload.id,
+        aMember.name()
+        //gender: aMember.gender(),
+        //province: aMember.province(),
+        //city: aMember.city(),
+        //weixin:aMember.weixin(),
+        //signature: aMember.payload.signature
+      )
+    }
+
+    res.send(results)
+
+  }
+  else{
+    res.send([])
+  }
+});
+
+router.post('/fansToAdd', async function (req, res, next) {
+      
+});
 
 router.post('/poke', async function (req, res, next) {
   const room = await bot.Room.find({ topic: 'test' });
@@ -214,6 +270,24 @@ router.post('/text', async function (req, res, next) {
   {
     console.log('unable to find room' + aTopic);
   }
+
+  res.send('done');
+
+});
+
+router.post('/msgTest', async function (req, res, next) {
+  //var id = req.body.id;
+  var aMsg = req.body.content;
+ // var somebody =  await bot.Contact.load(id);
+
+  somebody = await bot.Contact.find({name:"CA海外同城-墨尔本站2"}) 
+  if(somebody)
+  {
+    console.log('sending txt to ' + somebody.name());
+    await somebody.say(aMsg);
+  }
+  
+ 
 
   res.send('done');
 

@@ -3,16 +3,15 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
-
 var indexRouter = require('./routes/index');
-
 const { Wechaty } = require('wechaty')
-const Headcount = require('./models/Headcount');
+
+const Weishangs = require('./models/Weishang');
 
 var mongoose = require('mongoose');
 
 //connect to mongodb
-mongoose.connect('mongodb://localhost:27017/roombot', { useNewUrlParser: true })
+mongoose.connect('mongodb://localhost:27017/autoClicker', { useNewUrlParser: true })
   .then(() => console.log('database connected'))
   .catch((err) => console.log(err));
 
@@ -35,8 +34,15 @@ function onScan (qrcode, status) {
   
 }
 
-function onLogin (user) {
+async function onLogin (user) {
   console.log(`${user} login~`)
+  
+  // try { 
+  //   await user.signature(`Signature changed by wechaty on ${new Date()}`)
+  // } catch (e) {
+  //   console.error('change signature failed', e)
+  // }
+  console.log(user);
 }
 
 function onLogout(user) {
@@ -45,53 +51,94 @@ function onLogout(user) {
 
 async function onMessage (msg) {
    var contact = msg.from();
-  // var room = msg.room();
+   var room = msg.room();
+   if(room)
+   {
+    var topic = await room.topic()
+   }
+   
   if(!contact.name() )
   {
     await contact.sync()
   }
   
-
-
-  // console.log('msg contact: ' +contact.name())
-  
-  // console.log('msg room: ' +room)
-  // console.log('msg: ' +contact.city())
-  if(msg.text() && msg.text().length>=40 && msg.room()) //
+  if(msg.text() && msg.text().length>=40 && topic && contact.name()!='') 
   {
 
-    //console.log('room msg: '+ msg.room());
-    Headcount.findOne({ name: contact.name() }).then((ahc) =>{
-      if(ahc)
-      {
-        ahc.count++;
-        ahc.save().catch(err => console.log(err));
-      }
-      else{
-        var newhc = new Headcount(
+    let promise = new Promise((resolve, reject) => {
+      Weishangs.findOne({topic: topic}).then(aRoom=>{
+        if(aRoom)
+        {
+          if(!aRoom.members.includes(contact.name()))
           {
-            name: contact.name(),
-            count:1,
+            aRoom.members.push(contact.name());
+            aRoom.save().then(data => { resolve(data)}).catch(err => {console.log(err); reject();});
           }
-        );
-      
-        newhc.save()
-        // .then((user) => {
-          //this will be send as a response to the application
-          // const resUser = {
-          //   name: user.name,
-          //   email: user.email,
-          // }
-          //res.json(resUser)
-        // })
-      
-        .catch(err => console.log(err));
-      }
+          
+        }
+        else{
+          var newRoom = new Weishangs(
+            {
+              topic: topic,
+              members: [contact.name()],
+              created: new Date(),
+              updated:new Date()
 
-    })
+            }
+          )
+          newRoom.save().then(data => { resolve(data)}).catch(err => {console.log(err); reject();}); 
+        }
+      });
+
+      // Headcount.findOne({ name: contact.name()  }).then((ahc) =>{
+      //   if(ahc)
+      //   {
+      //     ahc.count++;
+  
+      //     if(!ahc.topics.includes(topic))
+      //     {
+      //       ahc.topics.push(topic);
+      //     }
+  
+      //     ahc.save().then(data => { resolve(data)}).catch(err => {console.log(err); reject();});
+      //   }
+      //   else{
+      //     var newhc = new Headcount(
+      //       {
+      //         name: contact.name(),
+      //         count:1,
+      //         topics: [topic]
+      //       }
+      //     );
+        
+      //     newhc.save().then(data => { resolve(data)}).catch(err => {console.log(err); reject();});
+      //   }
+  
+      // })
+
+
+    });
+
+    await promise;
+  
 
    
   }
+
+  // if(contact.friend())
+  // {
+  //   console.log('found a friend!');
+  //   if(msg.text() == 'change my name')
+  //   {
+  //     console.log('changing alias')
+  //     try {
+  //       await contact.alias('aaa-001')
+  //       console.log(`change ${contact.name()}'s alias successfully!`)
+  //     } catch (e) {
+  //       console.log(`failed to change ${contact.name()} alias!`)
+  //     }
+  //   }
+  // }
 
 }
 
@@ -101,6 +148,27 @@ global.bot = new Wechaty()
 .on('login',   onLogin)
 .on('logout',  onLogout)
 .on('message', onMessage)
+.on('friendship', async friendship => {
+  try {
+    console.log(`received friend event.`)
+    switch (friendship.type()) {
+
+    // 1. New Friend Request
+
+    case Friendship.Type.Receive:
+      await friendship.accept()
+      break
+
+    // 2. Friend Ship Confirmed
+
+    case Friendship.Type.Confirm:
+      console.log(`friend ship confirmed`)
+      break
+    }
+  } catch (e) {
+    console.error(e)
+  }
+})
 .on('ready', function(){
   console.log('ready event ')
 } )
@@ -140,7 +208,7 @@ app.use(function(err, req, res, next) {
   res.render('error');
 });
 
-var port = process.env.PORT || 80;
+var port = process.env.PORT || 3001;
 
 app.listen(port, function () {
   console.log('Example app listening on port ' + port + '!');

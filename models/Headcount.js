@@ -15,7 +15,12 @@ const HeadCountSchema = new Schema({
   date: {
     type: Date,
     default: Date.now
-  }
+  },
+  topics:[String]
+  
+},
+{
+  versionKey:false
 });
 
 const headcounts = mongoose.model('headcounts', HeadCountSchema);
