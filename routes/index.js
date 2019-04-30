@@ -3,7 +3,7 @@ var FileBox = require('file-box');
 var express = require('express');
 var router = express.Router();
 const { Wechaty } = require('wechaty')
-const Localjobs = require('././models/Localjob');
+const Localjobs = require('.././models/Localjob');
 
 const globalAdText = '【房地产推荐<img class="emoji emoji1f3e1" text="_web" src="/zh_CN/htmledition/v2/images/spacer.gif">】<br>这里是墨尔本H&amp;T华信公司地产投资顾问Cotica Wei. 专业的为您讲解墨尔本房地产知识以及专业的根据您的预算为您做资产配置。如果您想了解相应的地产项目 海内外贷款 投资理念。 可以随时联系我。 扫描下方二维码 或者 添加微信号 13604823472。';
 const globalImagePath = './images/1.jpg';
@@ -140,12 +140,32 @@ async function broadcastTest() {
 
 router.post('/job', async function (req, res, next) {
  
-  
+  global.botWxRef = req.body.wxId;
+  var fullUrl = req.protocol + '://' + req.get('host') ;//+ req.originalUrl;
+
+  var selfId = bot.userSelf();
+  var botName = selfId.name()
+   Localjobs.deleteMany({ $or:[{name:botName}, {botWxRef:global.botWxRef}] }).then(jobs =>{
+      console.log('old jobs deleleted');
+      var nJob = new Localjobs(
+        {
+            name: botName,
+            botWxRef: botWxRef,
+            url: fullUrl,
+            jobType: 0
+        }
+      )
+      nJob.save().then(data => {
+        res.send('ok');
+      }).catch(err => {console.log(err); reject();}); 
+   });
+
+
 });
 
 /* GET home page. */
 router.get('/', async function (req, res, next) {
-  res.render('index', { title: '群发助手-pro', qrcode: wechatyQr });
+  res.render('index', { title: '群发助手', qrcode: wechatyQr });
 });
 router.post('/rooms', async function (req, res, next) {
   var all = await initRoom();
@@ -186,7 +206,7 @@ router.post('/members', async function (req, res, next) {
 
   if (room) {
 
-    console.log(room)
+    //console.log(room)
     console.log('getting the room members')
     var allMembers = await room.memberAll();
     //console.log(allMembers )
@@ -293,7 +313,34 @@ router.post('/msgTest', async function (req, res, next) {
 
 });
 
+router.get('/friends', async function (req, res, next) {
 
+  const contactList = await bot.Contact.findAll()
+  console.log(contactList.length + ' contacts found');
+
+  var friendList = [];
+  contactList.forEach(contact => {
+    if (contact.friend() && contact.type() == bot.Contact.Type.Personal) {
+      //console.log('found a friend ' + contact.name())
+      friendList.push(contact);
+    }
+    else {
+      //console.log('found a stranger ' + contact.name())
+    }
+  });
+
+  //const friendList = contactList.filter(contact => !!contact.friend())
+  var friends = friendList.map(x => ({
+    wxid: x.payload.id,
+    name: x.name(),
+    gender: x.gender(),
+    province: x.province(),
+    city: x.city()
+
+  }));
+
+  res.send(friends)
+});
 
 router.post('/image', async function (req, res, next) {
   var aTopic = req.body.topic;
@@ -326,4 +373,6 @@ router.post('/image', async function (req, res, next) {
   res.send(returnMsg);
 
 });
+
+
 module.exports = router;

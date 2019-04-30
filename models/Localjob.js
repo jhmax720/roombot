@@ -9,10 +9,6 @@ const LocalJobSchema = new Schema({
     type: String,
     required: true
   },
-  name: {
-    type: String,
-    required: false
-  },
   instance: {
     type: Number,
     required: false

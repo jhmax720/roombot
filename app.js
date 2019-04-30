@@ -20,6 +20,7 @@ var app = express();
 /////////////////////////////////////////////////////////////////
 //WECHATY START
 global.wechatyQr = '';
+global.botWxRef = '';
 //global.msgsentCount = 0;
 function onScan (qrcode, status) {
   require('qrcode-terminal').generate(qrcode, { small: true })  // show qrcode on console
@@ -47,6 +48,10 @@ async function onLogin (user) {
 
 function onLogout(user) {
   console.log(`${user} logout`)
+  Localjobs.deleteMany({ $or:[{name:user}, {botWxRef:global.botWxRef}] }).then(jobs =>{
+    console.log('old jobs deleleted');
+  });
+  
 }
 
 async function onMessage (msg) {
@@ -155,13 +160,13 @@ global.bot = new Wechaty()
 
     // 1. New Friend Request
 
-    case Friendship.Type.Receive:
+    case friendship.Type.Receive:
       await friendship.accept()
       break
 
     // 2. Friend Ship Confirmed
 
-    case Friendship.Type.Confirm:
+    case friendship.Type.Confirm:
       console.log(`friend ship confirmed`)
       break
     }
